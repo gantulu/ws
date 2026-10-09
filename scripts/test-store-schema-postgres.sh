@@ -60,16 +60,17 @@ echo "[4/6] Applying Store V2 draft without its review-only BEGIN/ROLLBACK wrapp
 sed '/^[[:space:]]*begin;[[:space:]]*$/Id; /^[[:space:]]*rollback;[[:space:]]*$/Id' \
   "$ROOT_DIR/docs/drafts/store-backend-v2-schema-review.sql" | psql_stdin
 
-echo "[5/6] Running schema, constraints, index, trigger, and access assertions"
-psql_stdin < "$ROOT_DIR/scripts/sql/asri-schema-assertions.sql"
-
-echo "[6/6] Checking public product RLS behavior as anon"
+echo "[5/6] Creating active/inactive catalog fixtures"
 psql_stdin <<'SQL'
 INSERT INTO public.asri_products (sku, slug, name, price, stock_quantity, is_active)
 VALUES
   ('TEST-ACTIVE', 'test-active', 'Active fixture', 1000, 3, true),
   ('TEST-INACTIVE', 'test-inactive', 'Inactive fixture', 1000, 3, false);
 SQL
+
+echo "[6/6] Running schema, constraints, index, trigger, and access assertions"
+psql_stdin < "$ROOT_DIR/scripts/sql/asri-schema-assertions.sql"
+
 visible="$(psql_scalar "SET ROLE anon; SELECT count(*) FROM public.asri_products;")"
 if [[ "$visible" != "1" ]]; then
   echo "FAIL: anon should see exactly one active product; got: $visible" >&2
