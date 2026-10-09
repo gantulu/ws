@@ -84,4 +84,5 @@ test("pending payment may transition to paid, failed, cancelled, or expired", ()
 test("unknown provider status is routed to reconciliation rather than guessed", () => {
   assert.equal(decidePaymentTransition("pending", "unknown").action, "reconcile");
   assert.equal(decidePaymentTransition("draft", "paid").action, "reconcile");
+  assert.equal(decidePaymentTransition("draft", "failed").action, "reconcile");
 });
