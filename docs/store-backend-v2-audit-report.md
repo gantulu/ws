@@ -51,6 +51,10 @@ Function `asri-duitku-sandbox` is active at version 4 with `verify_jwt=false`. I
 7. **Callback state transitions:** a paid order is protected against downgrade, but other terminal/out-of-order states are not fully modeled. Unknown callback result codes currently map to pending; preserve the raw code and route unknown states to reconciliation.
 8. **Error/observability:** raw provider error text may be returned/stored in places without a clear allowlist. Do not log secrets, tokens, or full sensitive payloads.
 
+## Reusable Duitku contract helper implementation
+
+Added `backend/store-v2/duitku-contract.mjs`, a runtime-portable helper module for HMAC-SHA256 signature inputs/creation, signature comparison, distinct callback/status-code mapping, and conservative payment transition decisions. Added Node 22 tests with independent `node:crypto` HMAC reference calculations. These helpers are not yet wired into the deployed Edge Function; wiring them requires the new versioned Store V2 function and the database transaction/RPC layer.
+
 ## SQL review draft revisions
 
 The schema review draft now adds:
