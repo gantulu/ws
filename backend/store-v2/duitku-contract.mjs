@@ -115,7 +115,7 @@ export function decidePaymentTransition(currentStatus, incomingStatus) {
       reason: incoming === "paid" ? "late_paid_after_terminal_state" : "terminal_state_conflict",
     };
   }
-  if (current === "draft" && incoming !== "failed") {
+  if (current === "draft") {
     return { action: "reconcile", status: current, reason: "event_before_payment_attempt" };
   }
   return { action: "apply", status: incoming, reason: "valid_transition" };
