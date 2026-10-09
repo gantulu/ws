@@ -1,0 +1,28 @@
+name: Asri isolated PostgreSQL schema tests
+
+on:
+  push:
+    branches: [feat/store-mobile-v1-app]
+    paths:
+      - 'docs/drafts/**'
+      - 'scripts/**'
+      - '.github/workflows/asri-schema-isolated-test.yml'
+  pull_request:
+    paths:
+      - 'docs/drafts/**'
+      - 'scripts/**'
+      - '.github/workflows/asri-schema-isolated-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres-schema:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run isolated PostgreSQL tests
+        run: bash scripts/test-store-schema-postgres.sh
