@@ -78,7 +78,7 @@ Proposed fields:
 Rules:
 - Persist the SKU/name/variant/price snapshots used for checkout.
 - Re-read each product from the database at order creation; require it to be active and validate stock and selected variants.
-- Define whether stock is reserved at draft creation or decremented after successful payment. Do not implement until the chosen policy and concurrent-purchase behavior are approved.
+- Reserve stock atomically at order creation for 15 minutes. Decrement available stock once at reservation; payment confirmation consumes the reservation without a second decrement; failure/expiry/cancellation releases stock exactly once. Variant-level stock is unsupported in V2.
 - The server computes `line_total = unit_price × quantity` and verifies safe integer/range constraints.
 
 ### 3.3 Payment relationship
@@ -310,7 +310,7 @@ Response (illustrative):
 9. Populate a controlled sandbox catalogue fixture and test empty catalogue behavior separately.
 10. Confirm the existing legacy `duitku` and `duitku-callback` functions are untouched.
 
-## 7. Proposed implementation phases after approval
+## 7. Implementation phases
 
 - **V2-A — Contract lock:** approve order lifecycle, shipping pricing, stock policy, token expiry, and payment retry policy.
 - **V2-B — Schema migration draft:** write migration files on the feature branch only; review SQL, constraints, grants, RLS, indexes, rollback/forward-only approach. Do not apply to a live project yet.
@@ -323,7 +323,7 @@ Response (illustrative):
 
 The five decisions listed in Section 10 were approved by the user on 2026-10-09 and are locked as the V2 contract baseline. They must not be silently changed during implementation. A required change must be proposed as a versioned revision and reviewed.
 
-Contract approval does not authorize implementation. Migration SQL, Edge Function changes, frontend live integration, production configuration changes, and deployments remain blocked until the separate implementation diff is reviewed and explicitly approved.
+Implementation is in progress on the feature branch. Keep the storefront demo-only until the backend contract and sandbox tests pass. Do not apply migrations to the connected live project until its schema/migration baseline is reproducible and the migration has passed isolated tests.
 
 ## 9. Acceptance criteria
 
@@ -349,7 +349,7 @@ Contract approval does not authorize implementation. Migration SQL, Edge Functio
 
 ### 10.1 Order contract and lifecycle
 
-**Recommendation:** make order creation atomic and use these distinct state dimensions.
+**Approved contract:** make order creation atomic and use these distinct state dimensions.
 
 - `order_status`: `pending_payment`, `confirmed`, `processing`, `shipped`, `delivered`, `cancelled`, `expired`.
 - `payment_status`: `unpaid`, `pending`, `paid`, `failed`, `expired`, `cancelled`, `refunded`.
@@ -361,7 +361,7 @@ These values are proposed contract enums, not current database values. A migrati
 
 ### 10.2 Shipping price and method
 
-**Recommendation for V2 first release:** use server-configured fixed rates by shipping method/area, not a courier quote API in the first integration.
+**Approved V2 first release:** use server-configured fixed rates by shipping method/area, not a courier quote API in the first integration.
 
 - Client submits a configured `shippingMethod` and delivery address fields, never a shipping amount.
 - Server resolves the method and eligible destination against a maintained rate configuration; calculates the cost and returns the selected method, rate, and total.
@@ -374,7 +374,7 @@ Courier API integration can be a later version once the provider, credentials, r
 
 ### 10.3 Stock reservation and release
 
-**Recommendation:** reserve stock atomically when the order is created, with a **15-minute initial reservation window**, pending approval.
+**Approved contract:** reserve stock atomically when the order is created, with a **15-minute initial reservation window**.
 
 - The order-creation transaction validates stock and reserves quantities without allowing concurrent checkouts to oversell.
 - Store reservation expiry explicitly; the reservation must be recoverable by a scheduled/server-side expiry process.
@@ -402,7 +402,7 @@ The 90-day and 30-minute periods are the approved V2 contract defaults.
 
 ### 10.5 Payment retry and idempotency
 
-**Recommendation:** allow a new payment attempt only after the previous attempt is conclusively failed or expired; do not start parallel active attempts for one order.
+**Approved contract:** allow a new payment attempt only after the previous attempt is conclusively failed or expired; do not start parallel active attempts for one order.
 
 - Each attempt receives a unique server-generated `merchant_order_id` and is linked to the store order.
 - Use a client idempotency key for each intended action; enforce uniqueness server-side and return the existing result for duplicate requests.
@@ -434,7 +434,7 @@ On 2026-10-09, the user approved the five contract decisions in Draft 2:
 4. Scoped opaque tokens stored as hashes: tracking token 90 days; payment token 30 minutes; revocable and scope-bound.
 5. Permit retry only after confirmed failure/expiry; one active attempt at a time; reconcile unknown outcomes before retry.
 
-The design is now **locked as the approved contract baseline**. The implementation plan and SQL schema draft are review artifacts only:
+The design is now **locked as the approved contract baseline**. The implementation plan and SQL schema draft are active implementation artifacts; the SQL remains non-executable until converted to a versioned migration after baseline reconciliation:
 - [Implementation plan](store-backend-v2-implementation-plan.md)
 - [Schema review draft — not a migration](drafts/store-backend-v2-schema-review.sql)
 
