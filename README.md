@@ -14,7 +14,7 @@ Repository ini sekarang menampung frontend toko online mobile-only dan tetap mem
 
 ## Menjalankan aplikasi secara lokal
 
-Persyaratan: Node.js 18 atau lebih baru.
+Persyaratan: Node.js 22 dan npm.
 
 ```bash
 npm install
@@ -26,6 +26,12 @@ Untuk memeriksa build produksi:
 ```bash
 npm run build
 npm run preview
+```
+
+Pengujian browser otomatis:
+
+```bash
+npm test
 ```
 
 ## Rute yang tersedia
@@ -51,6 +57,7 @@ Vite menyediakan fallback SPA untuk rute frontend saat dijalankan melalui dev se
 - [Store Mobile V1 specification](docs/store-mobile-v1.md)
 - [Repository audit V1](docs/repository-audit-v1.md)
 - [Implementation and verification log](docs/store-mobile-v1-implementation-v1.md)
+- [Store backend contract audit V1](docs/store-backend-contract-audit-v1.md)
 
 README sebelumnya merujuk ke `docs/duitku-v1.2-remediation.md`, tetapi file tersebut tidak ada pada tree yang diaudit. Konten remediasi tidak dibuat ulang tanpa sumber yang disetujui.
 
