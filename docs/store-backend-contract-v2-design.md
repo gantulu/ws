@@ -4,7 +4,7 @@
 - Design branch: `feat/store-mobile-v1-app`
 - Version: Store Backend Contract V2 — Draft 1
 - Date: 2026-10-09
-- Status: **PROPOSAL FOR REVIEW — NOT APPROVED FOR IMPLEMENTATION**
+- Status: **CONTRACT DECISIONS LOCKED — IMPLEMENTATION NOT AUTHORIZED**
 - Workflow: AUDIT → RECOMMEND → DESIGN → APPROVE → IMPLEMENT → VERIFY
 - Scope: guest checkout, product/order contract, Duitku sandbox payments, and customer-safe tracking.
 - Safety boundary: no database migration, Edge Function deployment, secret access, production configuration change, or change to `main` is authorized by this document.
@@ -427,3 +427,21 @@ Please review the following recommended defaults as a single contract set:
 5. **Payment retry:** only after conclusive failed/expired status; one active attempt at a time; reconcile unknown outcomes before retry.
 
 **Approval gate:** until the user explicitly approves or changes these five decisions, do not write migration SQL, modify Edge Functions, alter grants/RLS, connect frontend to live backend, or deploy anything. After approval, prepare a separate implementation plan and migration diff for review; that approval still does not imply permission to apply changes to a live project or production.
+
+
+## 11. Decision lock and implementation review artifacts
+
+On 2026-10-09, the user approved the five contract decisions in Draft 2:
+1. Separate order, payment, and shipment state dimensions using the proposed enums.
+2. Server-configured fixed shipping rates by method/destination for the first release.
+3. Atomic 15-minute stock reservation; consume once on confirmed payment, release on failure/expiry/cancellation, and reconcile late-paid cases.
+4. Scoped opaque tokens stored as hashes: tracking token 90 days; payment token 30 minutes; revocable and scope-bound.
+5. Permit retry only after confirmed failure/expiry; one active attempt at a time; reconcile unknown outcomes before retry.
+
+The design is now **locked as the approved contract baseline**. The implementation plan and SQL schema draft are review artifacts only:
+- [Implementation plan](store-backend-v2-implementation-plan.md)
+- [Schema review draft — not a migration](drafts/store-backend-v2-schema-review.sql)
+
+Approval is limited to the contract design. It does **not** authorize migration application, Edge Function changes, frontend live integration, secret access, production configuration changes, merge, or deployment. The SQL file is outside `supabase/migrations/` and must be reconciled and tested in an isolated environment before it can be converted into a real migration.
+
+Additional compatibility constraint: the audited `asri_payment_orders.amount` has a database check requiring a positive value. Unless a separate zero-value checkout flow is approved, the first release must reject orders whose computed total is zero.
