@@ -14,6 +14,8 @@
 -- Order creation + stock reservation + item snapshots + payment draft + token
 -- hashes must be atomic. This DDL alone does NOT provide that transaction.
 -- A reviewed server-side RPC/transaction is required before endpoints are usable.
+-- Migration ownership is not established: repository currently has no supabase/
+-- migration baseline, while the connected project has unrelated historical migrations.
 
 begin;
 
@@ -22,6 +24,7 @@ create table public.asri_store_orders (
   id uuid primary key default gen_random_uuid(),
   order_number text not null unique,
   idempotency_key text not null unique,
+  request_fingerprint text not null,
   order_status text not null default 'pending_payment'
     check (order_status in (
       'pending_payment', 'confirmed', 'processing', 'shipped',
@@ -46,7 +49,7 @@ create table public.asri_store_orders (
   shipping_rate_snapshot jsonb not null default '{}'::jsonb,
   shipping_cost bigint not null check (shipping_cost >= 0),
   subtotal bigint not null check (subtotal >= 0),
-  total_amount bigint not null check (total_amount >= 0),
+  total_amount bigint not null check (total_amount > 0),
   currency text not null default 'IDR' check (currency = 'IDR'),
   stock_reservation_expires_at timestamptz,
   created_at timestamptz not null default now(),
@@ -101,6 +104,7 @@ create table public.asri_store_shipping_rates (
   id uuid primary key default gen_random_uuid(),
   method_code text not null,
   method_name text not null,
+  priority smallint not null default 0,
   destination_province text,
   destination_city text,
   price bigint not null check (price >= 0),
@@ -114,7 +118,11 @@ create table public.asri_store_shipping_rates (
 );
 create index asri_store_shipping_rates_lookup_idx
   on public.asri_store_shipping_rates
-  (method_code, destination_province, destination_city, is_active);
+  (method_code, is_active, priority desc, effective_from desc);
+-- Resolver contract: filter to active/effective rows matching method; exact city
+-- beats province-only, which beats the global fallback; within the same scope,
+-- sort priority DESC, effective_from DESC, created_at DESC, id ASC. Reject if no
+-- eligible row exists. The resolver must always choose exactly one row by this order.
 
 -- 5) Stock reservation ledger. Reservation creation must lock product rows and
 -- decrement available stock_quantity atomically in the same transaction.
@@ -185,8 +193,11 @@ create table public.asri_store_shipment_events (
   source text not null check (source in ('internal', 'manual_verified', 'carrier_api')),
   source_event_id text,
   created_at timestamptz not null default now(),
-  unique (shipment_id, source, source_event_id)
+  check (length(trim(description)) > 0)
 );
+create unique index asri_store_shipment_events_source_event_uidx
+  on public.asri_store_shipment_events (shipment_id, source, source_event_id)
+  where source_event_id is not null;
 create index asri_store_shipment_events_timeline_idx
   on public.asri_store_shipment_events (shipment_id, event_at desc);
 
@@ -207,7 +218,30 @@ create index asri_payment_orders_store_order_id_idx
   on public.asri_payment_orders (store_order_id)
   where store_order_id is not null;
 
--- 10) Lock down client roles. No anon/authenticated direct order/payment/token/shipment access.
+-- 10) Enforce append-only histories and immutable order-item snapshots.
+-- service_role is not the table owner; deny UPDATE/DELETE both by grants and triggers.
+create or replace function public.asri_store_reject_history_mutation()
+returns trigger
+language plpgsql
+set search_path = pg_catalog
+as $
+begin
+  raise exception 'store audit/snapshot rows are immutable';
+end;
+$;
+revoke all on function public.asri_store_reject_history_mutation() from public, anon, authenticated;
+
+create trigger asri_store_order_status_history_immutable
+before update or delete on public.asri_store_order_status_history
+for each row execute function public.asri_store_reject_history_mutation();
+create trigger asri_store_shipment_events_immutable
+before update or delete on public.asri_store_shipment_events
+for each row execute function public.asri_store_reject_history_mutation();
+create trigger asri_store_order_items_immutable
+before update or delete on public.asri_store_order_items
+for each row execute function public.asri_store_reject_history_mutation();
+
+-- 11) Lock down client roles. No anon/authenticated direct order/payment/token/shipment access.
 -- service_role access is expected for trusted server code; verify exact grants in isolated DB.
 alter table public.asri_store_orders enable row level security;
 alter table public.asri_store_order_items enable row level security;
@@ -218,27 +252,32 @@ alter table public.asri_store_order_access_tokens enable row level security;
 alter table public.asri_store_shipments enable row level security;
 alter table public.asri_store_shipment_events enable row level security;
 
-revoke all on public.asri_store_orders from anon, authenticated;
-revoke all on public.asri_store_order_items from anon, authenticated;
-revoke all on public.asri_store_order_status_history from anon, authenticated;
-revoke all on public.asri_store_shipping_rates from anon, authenticated;
-revoke all on public.asri_store_stock_reservations from anon, authenticated;
-revoke all on public.asri_store_order_access_tokens from anon, authenticated;
-revoke all on public.asri_store_shipments from anon, authenticated;
-revoke all on public.asri_store_shipment_events from anon, authenticated;
+revoke all on public.asri_store_orders from public, anon, authenticated;
+revoke all on public.asri_store_order_items from public, anon, authenticated;
+revoke all on public.asri_store_order_status_history from public, anon, authenticated;
+revoke all on public.asri_store_shipping_rates from public, anon, authenticated;
+revoke all on public.asri_store_stock_reservations from public, anon, authenticated;
+revoke all on public.asri_store_order_access_tokens from public, anon, authenticated;
+revoke all on public.asri_store_shipments from public, anon, authenticated;
+revoke all on public.asri_store_shipment_events from public, anon, authenticated;
 
 -- Explicit server-role grants for the new private tables; verify against project defaults.
 grant all on public.asri_store_orders to service_role;
 grant all on public.asri_store_order_items to service_role;
-grant all on public.asri_store_order_status_history to service_role;
+grant select, insert on public.asri_store_order_status_history to service_role;
 grant all on public.asri_store_shipping_rates to service_role;
 grant all on public.asri_store_stock_reservations to service_role;
 grant all on public.asri_store_order_access_tokens to service_role;
 grant all on public.asri_store_shipments to service_role;
-grant all on public.asri_store_shipment_events to service_role;
+grant select, insert on public.asri_store_shipment_events to service_role;
 
 -- Do not change existing grants on asri_payment_orders in this draft. The audit
 -- observed it as service-role-only; re-verify exact privileges during review.
+
+-- Service role receives no UPDATE/DELETE on append-only histories or item snapshots.
+revoke update, delete, truncate, references, trigger on public.asri_store_order_status_history from public, anon, authenticated, service_role;
+revoke update, delete, truncate, references, trigger on public.asri_store_shipment_events from public, anon, authenticated, service_role;
+revoke update, delete, truncate, references, trigger on public.asri_store_order_items from public, anon, authenticated, service_role;
 
 -- This is a review draft, so transaction is intentionally not committed/applied.
 -- When converted to a real migration, transaction handling must follow the
