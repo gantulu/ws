@@ -58,6 +58,9 @@ Vite menyediakan fallback SPA untuk rute frontend saat dijalankan melalui dev se
 - [Repository audit V1](docs/repository-audit-v1.md)
 - [Implementation and verification log](docs/store-mobile-v1-implementation-v1.md)
 - [Store backend contract audit V1](docs/store-backend-contract-audit-v1.md)
+- [Store Backend Contract V2 — locked design](docs/store-backend-contract-v2-design.md)
+- [Store Backend V2 implementation plan — review only](docs/store-backend-v2-implementation-plan.md)
+- [Store Backend V2 schema review draft — not a migration](docs/drafts/store-backend-v2-schema-review.sql)
 
 README sebelumnya merujuk ke `docs/duitku-v1.2-remediation.md`, tetapi file tersebut tidak ada pada tree yang diaudit. Konten remediasi tidak dibuat ulang tanpa sumber yang disetujui.
 
