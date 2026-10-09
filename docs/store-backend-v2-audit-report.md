@@ -22,7 +22,7 @@ The V1 storefront remains demo-only. Backend V2 cannot safely be connected to th
 - Migration ledger includes payment migrations such as `20261008101511_payment_core`, `20261008101517_duitku_v2`, `20261009060946_create_asri_duitku_payment_schema_v1`, and `20261009062138_create_asri_products_catalog`, plus many unrelated app migrations.
 - `public.asri_products` had no products at the previous audit snapshot. Live mode must render an explicit empty state; never fall back silently to demo products.
 - `public.asri_payment_orders.amount` is constrained to positive values. V2 rejects a computed total of zero.
-- Payment order, transaction, callback, and status history tables are intended for server-only access; re-check exact grants and policies against the remote schema baseline before migration.
+- Live catalog introspection confirms only `asri_products` has an observed public SELECT policy (`is_active = true`, roles `anon` and `authenticated`). The payment tables have RLS enabled but no policies; `service_role` has broad table grants and the `postgres` owner has full privileges. No `anon`/`authenticated` table grants were returned for the payment tables. Reconfirm defaults and function-level privileges during baseline capture.
 - Supabase security advisor reports `public.ns_invest` has RLS disabled while a policy exists. This is a separate live security issue; audit intended consumers before changing access behavior.
 - The advisor also reports numerous functions with mutable `search_path`; prioritize privileged functions in a separate security pass.
 
