@@ -18,7 +18,7 @@ test("product selection, checkout validation, and demo tracking work", async ({ 
   await page.getByRole("button", { name: "Tambah jumlah" }).click();
   await expect(page.locator(".quantity span")).toHaveText("2");
   await page.getByRole("button", { name: /Tambah ke bag/ }).click();
-  await page.getByRole("button", { name: /Bag \(/ }).first().click();
+  await page.getByRole("button", { name: "Buka bag" }).click();
 
   await expect(page.getByRole("heading", { name: "Ringkasan pesanan" })).toBeVisible();
   await expect(page.getByText("Qty 2")).toBeVisible();
