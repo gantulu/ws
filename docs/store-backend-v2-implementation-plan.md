@@ -45,7 +45,7 @@ Required before creating/applying a migration:
 
 ### Phase C — Server endpoints (sandbox only)
 
-Implement in a new isolated function path/version after the schema is approved:
+Implement in a new isolated function path/version after the schema baseline is reproducible and the local/branch schema tests pass:
 1. `POST /orders`: validate request, load current active products, compute totals, validate configured shipping, reserve stock atomically, create order/item snapshots/payment draft/access token hashes, and enforce idempotency in one transaction.
 2. `POST /orders/{orderNumber}/payments`: validate payment scope token; allow only one active attempt; create/reuse attempt by idempotency key; call Duitku sandbox.
 3. `POST /payments/status`: reconcile the provider status, persist the transition, return the committed canonical status.
@@ -82,7 +82,7 @@ Only after Phase C/D pass in sandbox:
 
 ### Phase F — Release review
 
-Requires a separate explicit release approval. Review final diff, security advisors, grants/RLS, callback behavior, secret handling, browser tests, rollback plan, and environment separation. No production deployment is implied by approval of this plan.
+Review final diff, security advisors, grants/RLS, callback behavior, secret handling, browser tests, rollback plan, and environment separation. Proceed through repository and isolated/sandbox stages without repeated approval prompts. Do not infer production deployment from sandbox success.
 
 ## 3. Current blockers and dependencies
 
