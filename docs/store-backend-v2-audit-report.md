@@ -66,9 +66,9 @@ These are static design improvements, not a database migration. SQL syntax, trig
 
 ## Next implementation sequence
 
-1. Add static contract guards to CI for the schema review draft.
+1. Add static schema guards and reusable Duitku API V2 signature/status-transition helpers to CI. (Started on the feature branch.)
 2. Capture remote schema/migration baseline using the official Supabase CLI in an isolated audit branch; inspect all existing consumers and grants.
-3. Convert the reviewed DDL to a timestamped migration only after the baseline is reproducible.
+3. Convert the reviewed DDL to a timestamped migration only after the baseline is reproducible and a local/isolated database run passes.
 4. Implement atomic database RPCs for order creation/reservation, payment transition, callback deduplication, stock release/consume, and expiry.
 5. Implement a new versioned store Edge Function; leave legacy functions untouched.
 6. Test Duitku sandbox signatures, callback replay/failure/reordering, status reconciliation, payment timeout, and stock concurrency.
