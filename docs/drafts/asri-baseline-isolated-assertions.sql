@@ -226,6 +226,47 @@ values
   ('TEST-ORDER-001', '{}'::jsonb, null),
   ('TEST-ORDER-002', '{}'::jsonb, null);
 
+-- Duplicate non-null provider references and callback fingerprints must be rejected.
+do $
+declare
+  order_a uuid;
+  order_b uuid;
+begin
+  select id into order_a from public.asri_payment_orders where merchant_order_id='TEST-ORDER-001';
+  select id into order_b from public.asri_payment_orders where merchant_order_id='TEST-ORDER-002';
+
+  insert into public.asri_payment_transactions (order_id, provider, provider_reference, amount)
+  values (order_a, 'duitku', 'TEST-REF-DUP', 1000);
+
+  begin
+    insert into public.asri_payment_transactions (order_id, provider, provider_reference, amount)
+    values (order_b, 'duitku', 'TEST-REF-DUP', 1000);
+    raise exception 'Duplicate non-null provider reference unexpectedly accepted';
+  exception when unique_violation then
+    null;
+  end;
+
+  insert into public.asri_payment_callbacks (merchant_order_id, payload, event_fingerprint)
+  values ('TEST-ORDER-001', '{}'::jsonb, 'TEST-FINGERPRINT-DUP');
+
+  begin
+    insert into public.asri_payment_callbacks (merchant_order_id, payload, event_fingerprint)
+    values ('TEST-ORDER-002', '{}'::jsonb, 'TEST-FINGERPRINT-DUP');
+    raise exception 'Duplicate non-null callback fingerprint unexpectedly accepted';
+  exception when unique_violation then
+    null;
+  end;
+
+  begin
+    insert into public.asri_payment_transactions (order_id, amount)
+    values (gen_random_uuid(), 1000);
+    raise exception 'Invalid transaction order foreign key unexpectedly accepted';
+  exception when foreign_key_violation then
+    null;
+  end;
+end;
+$;
+
 -- History ID should be generated automatically.
 insert into public.asri_payment_status_history (order_id, new_status, source)
 select id, 'draft', 'create'
