@@ -224,11 +224,11 @@ create or replace function public.asri_store_reject_history_mutation()
 returns trigger
 language plpgsql
 set search_path = pg_catalog
-as $
+as $$
 begin
   raise exception 'store audit/snapshot rows are immutable';
 end;
-$;
+$$;
 revoke all on function public.asri_store_reject_history_mutation() from public, anon, authenticated;
 
 create trigger asri_store_order_status_history_immutable
