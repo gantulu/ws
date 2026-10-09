@@ -1,38 +1,59 @@
-# ASRI Collection — Store Mobile V1
+# ASRI Store Mobile V1 — `gantulu/ws`
 
-This branch contains the first runnable frontend prototype for the mobile online store. The locked page specification and audit documents are preserved in docs/.
+Repository ini sekarang menampung frontend toko online mobile-only dan tetap mempertahankan ruang dokumentasi remediation Duitku V1.2. Implementasi Store Mobile V1 dikerjakan pada branch fitur; branch `main` tidak diubah.
 
-## Run locally
+## Status implementasi
 
-Requirements: Node.js 22 or a compatible current LTS release, and npm.
+- Frontend: React + Vite.
+- Komponen dan alur UI utama: `src/App.jsx`.
+- Styling berada di file `src/App.jsx`; scaffold entry ada di `src/main.jsx`.
+- Halaman: katalog, detail produk, checkout demo, tracking demo.
+- Data produk, tarif pengiriman, dan status pesanan saat ini merupakan data simulasi.
+- Duitku, Supabase, backend order, dan kurir **belum terhubung**.
+- Tidak ada secret atau kredensial yang diperlukan untuk menjalankan prototype.
+
+## Menjalankan aplikasi secara lokal
+
+Persyaratan: Node.js 18 atau lebih baru.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. To verify a production bundle:
+Untuk memeriksa build produksi:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Current implementation scope
+## Rute yang tersedia
 
-- React + Vite; the primary UI and client-side page state live in src/App.jsx.
-- Product catalog, search/category filters, product detail, local bag, checkout form, and demo tracking routes.
-- This is a frontend-only prototype. Product data, shipping costs, checkout totals, order IDs, payment choices, and tracking are demo data/state.
-- No Supabase or Duitku requests are made. No real order or payment is created.
+- `/products` — katalog, pencarian, filter kategori.
+- `/products/:slug` — detail produk, ukuran, kuantitas.
+- `/checkout` — penerima, pengiriman demo, pilihan pembayaran simulasi.
+- `/tracking/:orderId` — status pesanan demo.
 
-## Documents
+Vite menyediakan fallback SPA untuk rute frontend saat dijalankan melalui dev server atau preview.
 
-- [Store Mobile V1 locked specification](docs/store-mobile-v1.md)
-- [Initial repository audit](docs/repository-audit-v1.md)
-- [Implementation scope and verification notes](docs/store-mobile-v1-implementation-v1.md)
+## Batas keamanan dan integrasi
 
-## Original workspace safety boundaries
+- Checkout hanya membuat pesanan demo di frontend; tidak memanggil Duitku atau backend.
+- Harga dan total dari browser bukan nilai pembayaran otoritatif.
+- Jangan gunakan prototype ini untuk menerima pembayaran atau pesanan produksi.
+- Jangan mengubah database, Edge Function, secret, atau konfigurasi produksi sebagai bagian dari pekerjaan frontend ini.
+- Sebelum integrasi, audit schema dan access policy produk, kontrak pembuatan order, kontrak Duitku sandbox, signature callback, idempotency, serta otorisasi tracking.
+- Pertahankan tabel legacy sampai konsumen dan rencana migrasinya dipetakan.
 
-The repository also retains its original ASRI Collection Duitku V1.2 remediation and sandbox-verification purpose. Do not change production database or Edge Functions from this frontend branch. Do not commit credentials, API keys, tokens, or secret values. Keep Duitku in sandbox until end-to-end tests pass and production is explicitly approved. Preserve legacy tables until their consumers have been mapped.
+## Dokumentasi yang dipertahankan
 
-Note: the original README referenced docs/duitku-v1.2-remediation.md; that file was not present in the repository inventory when the initial audit was performed. The missing remediation content has not been fabricated.
+- [Store Mobile V1 specification](docs/store-mobile-v1.md)
+- [Repository audit V1](docs/repository-audit-v1.md)
+- [Implementation and verification log](docs/store-mobile-v1-implementation.md)
+
+README sebelumnya merujuk ke `docs/duitku-v1.2-remediation.md`, tetapi file tersebut tidak ada pada tree yang diaudit. Konten remediasi tidak dibuat ulang tanpa sumber yang disetujui.
+
+## Ruang kerja remediasi Duitku V1.2
+
+Repository ini juga digunakan untuk rancangan keamanan Supabase, integritas pembayaran, idempotency callback, hardening autentikasi custom tanpa Supabase Auth, dan perencanaan sandbox end-to-end. Perubahan backend tetap membutuhkan audit kontrak dan persetujuan tersendiri.
