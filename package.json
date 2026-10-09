@@ -3,19 +3,18 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "engines": {
-    "node": ">=18.0.0"
-  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "playwright test"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "4.3.4",
-    "vite": "5.4.14",
-    "react": "18.3.1",
-    "react-dom": "18.3.1"
+    "vite": "latest",
+    "react": "latest",
+    "react-dom": "latest"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@playwright/test": "latest"
+  }
 }
