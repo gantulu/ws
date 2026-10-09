@@ -10,7 +10,7 @@
 ## 1. Scope boundary
 
 Included in the planned V2 implementation:
-- New store-order domain tables and constraints.
+- New store-order domain tables and constraints, including append-only order status history.
 - Fixed shipping-rate configuration managed server-side.
 - Atomic stock reservation and release lifecycle.
 - Hashed, scoped, expiring guest access tokens.
@@ -91,6 +91,7 @@ Requires a separate explicit release approval. Review final diff, security advis
 - Current custom identity logic compares a stored password directly; V2 must not reuse it.
 - The live Supabase project migration history includes unrelated app migrations and is not fully represented by this repository. Do not infer that this repo can safely apply migrations to the live project.
 - The callback upsert conflict-target issue and stale status response require a tested fix.
+- The existing payment table enforces `amount > 0`; the first release must reject zero-total orders or separately approve a zero-payment flow.
 - Existing product stock is tracked at product level; per-size/per-color inventory is not represented by the audited `stock_quantity` field. V2 must reject unsupported variant inventory assumptions until a separate variant stock model is approved.
 
 ## 4. Proposed acceptance gates
