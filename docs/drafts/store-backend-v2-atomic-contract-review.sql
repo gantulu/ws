@@ -317,9 +317,9 @@ begin
     else
       update public.asri_store_orders set payment_status='paid',order_status='confirmed',updated_at=clock_timestamp()
         where id=v_order.id;
-      update public.asri_store_stock_reservations set status='consumed',
+      update public.asri_store_stock_reservations r set status='consumed',
         consumed_at=clock_timestamp(),updated_at=clock_timestamp()
-        where order_id=v_order.id and status='reserved' and expires_at > clock_timestamp();
+        where r.order_id=v_order.id and r.status='reserved' and r.expires_at > clock_timestamp();
       insert into public.asri_store_order_status_history(order_id,previous_status,new_status,source,note)
       values (v_order.id,v_order.order_status,'confirmed','payment_callback','Verified payment success');
     end if;
@@ -335,11 +335,11 @@ begin
     end if;
     -- Restore stock only when a reservation is transitioned from reserved once.
     with released as (
-      update public.asri_store_stock_reservations
+      update public.asri_store_stock_reservations r
       set status=case when p_new_status='expired' then 'expired' else 'released' end,
           released_at=clock_timestamp(),updated_at=clock_timestamp()
-      where order_id=v_order.id and status='reserved'
-      returning product_id,quantity
+      where r.order_id=v_order.id and r.status='reserved'
+      returning r.product_id,r.quantity
     ), totals as (
       select product_id,sum(quantity)::integer quantity from released group by product_id
     )
