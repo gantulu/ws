@@ -35,7 +35,7 @@ test("product selection, checkout validation, and demo tracking work", async ({ 
   await expect(page.getByText("Menunggu pembayaran", { exact: true })).toBeVisible();
   await page.reload();
   await expect(page.getByRole("heading", { name: "Pesanan tercatat." })).toBeVisible();
-  await expect(page.getByText(/Data pesanan tidak tersedia di sesi ini/)).toBeVisible();
+  await expect(page.getByText(/Tracking produksi wajib berasal dari backend/)).toBeVisible();
 });
 
 test("unknown routes offer a way back to the catalog", async ({ page }) => {
