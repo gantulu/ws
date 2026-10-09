@@ -50,7 +50,7 @@ Proposed fields:
 - `shipping_method text not null`
 - `shipping_cost bigint not null check (shipping_cost >= 0)`
 - `subtotal bigint not null check (subtotal >= 0)`
-- `total_amount bigint not null check (total_amount >= 0)`
+- `total_amount bigint not null check (total_amount > 0)`
 - `currency text not null check (currency = 'IDR')`
 - `created_at timestamptz not null`
 - `updated_at timestamptz not null`
