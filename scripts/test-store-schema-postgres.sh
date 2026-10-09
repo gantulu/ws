@@ -39,7 +39,7 @@ psql_stdin() {
   docker exec -i "$CONTAINER_NAME" psql -X -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" "$@"
 }
 psql_scalar() {
-  docker exec "$CONTAINER_NAME" psql -X -A -t -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "$1"
+  docker exec "$CONTAINER_NAME" psql -X -q -A -t -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "$1"
 }
 
 echo "[2/6] Creating Supabase-like roles in disposable DB"
