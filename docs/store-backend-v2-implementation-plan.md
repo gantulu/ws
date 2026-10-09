@@ -86,12 +86,12 @@ Review final diff, security advisors, grants/RLS, callback behavior, secret hand
 
 ## 3. Current blockers and dependencies
 
-- The audited `asri_products` catalogue was empty (0 active products); a controlled sandbox fixture is needed for end-to-end tests.
+- The audited `asri_products` catalogue was empty (0 active products); a controlled sandbox fixture is needed for end-to-end tests. The live storefront must remain empty-state-only until products are deliberately published.
 - Existing payment tables/functions are service-role-only and the current create endpoint requires a pre-existing draft row.
 - Current custom identity logic compares a stored password directly; V2 must not reuse it.
 - The live Supabase project migration history contains 40+ migrations, while this repository branch has no `supabase/` directory. The repository is not yet a complete migration source of truth; first capture/reconcile the remote baseline using the official Supabase CLI migration workflow.
 - The callback path has multiple correctness issues requiring fixes: partial-index conflict inference, status response from a stale pre-update row, callback result-code mapping, incorrect use of `paymentCode` as payment method, duplicate callback handling before verifying that the event belongs to a valid order, and non-atomic order/history/transaction updates.
-- The existing payment table enforces `amount > 0`; the first release must reject zero-total orders or separately approve a zero-payment flow.
+- The existing payment table enforces `amount > 0`; the first release rejects zero-total orders. A zero-payment flow is outside V2.
 - Existing product stock is tracked at product level; per-size/per-color inventory is not represented by the audited `stock_quantity` field. V2 must reject unsupported variant inventory assumptions until a separate variant stock model exists.
 - Duitku API V2's current docs use HMAC-SHA256 for inquiry/callback/status signatures. `transactionStatus` status codes differ from callback `resultCode`; preserve separate mappings. Do not poll status aggressively because Duitku documents rate limits.
 - The Supabase security advisor reports `public.ns_invest` has RLS disabled despite a policy existing. This is unrelated to the store schema but is a live security finding; do not silently change access behavior without auditing intended consumers/policies.
