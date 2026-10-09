@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:backend-contract": "node --test tests/store-backend-v2-schema.test.mjs"
   },
   "dependencies": {
     "vite": "latest",
