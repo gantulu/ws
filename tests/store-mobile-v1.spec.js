@@ -33,8 +33,11 @@ test("product selection, checkout validation, and demo tracking work", async ({ 
   await expect(page.getByRole("heading", { name: "Pesanan tercatat." })).toBeVisible();
   await expect(page.getByText(/Tidak ada pembayaran atau pengiriman yang dibuat/)).toBeVisible();
   await expect(page.getByText("Menunggu pembayaran", { exact: true })).toBeVisible();
+  const demoOrderNumber = (await page.locator(".tracking-head h2").textContent()) ?? "";
+  expect(demoOrderNumber).toMatch(/^DEMO-/);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Pesanan tercatat." })).toBeVisible();
+  await expect(page.locator(".tracking-head h2")).toHaveText(demoOrderNumber);
   await expect(page.getByText(/Tracking produksi wajib berasal dari backend/)).toBeVisible();
 });
 
