@@ -15,6 +15,7 @@
     "react-dom": "latest"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "latest",
     "@playwright/test": "latest"
   }
 }
