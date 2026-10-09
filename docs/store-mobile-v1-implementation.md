@@ -6,7 +6,7 @@
 - Base specification branch: `spec/store-mobile-v1`
 - Default branch: `main` (not changed)
 - Workflow: `AUDIT → RECOMMEND → IMPLEMENT → VERIFY`
-- Status: **Frontend prototype implemented; build verification pending**
+- Status: **Frontend prototype implemented; production build passed in GitHub Actions**
 
 ## 1. Decision and scope
 
@@ -51,13 +51,21 @@ Deliver a runnable, mobile-first UI prototype first. Keep real checkout and trac
 |---|---|---|
 | Branch isolation | PASS | All implementation changes are on `feat/store-mobile-v1-app`; no write was made to `main` |
 | Required scaffold files | PASS — source inspection | `package.json`, `index.html`, `src/main.jsx`, `vite.config.js`, `src/App.jsx` are present on the feature branch |
-| CSS template literal syntax | FIX APPLIED; runtime test pending | Corrected the stylesheet delimiter in `src/App.jsx`; a local build could not be run in the current environment because GitHub network access was unavailable |
-| Dependency reproducibility | IMPROVED | React/Vite/plugin versions are pinned; no lockfile has been generated or verified |
+| CSS template literal syntax | PASS — build evidence | Corrected the stylesheet delimiter; the GitHub Actions production build completed successfully |
+| Dependency reproducibility | PARTIAL | React/Vite/plugin versions are pinned and CI dependency installation passed; no lockfile has been committed |
 | Route interaction | NOT RUN | Requires browser/runtime testing |
 | Responsive behavior | NOT RUN | Requires viewport/browser testing |
 | Checkout / tracking demo | SOURCE REVIEW ONLY | No browser test evidence yet |
 | Supabase / Duitku / courier integration | NOT IMPLEMENTED | Intentionally excluded; no backend contract or production change |
 | Security / production readiness | NOT APPROVED | Prototype must not be used for real orders or payments |
+
+### CI build evidence
+
+- Workflow: [Verify Store Mobile V1](https://github.com/gantulu/ws/actions/runs/37895450743)
+- Run ID: `37895450743`
+- Commit tested: `2f8d9b4eda1151520f00fda8ea463e793c3f9e2a`
+- Result: **SUCCESS** — dependency installation and `npm run build` both completed successfully.
+- The latest commit after this run only removes a duplicate workflow file; application source and dependency manifest were unchanged.
 
 ## 7. Next verification steps
 
