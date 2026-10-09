@@ -19,7 +19,6 @@ echo "[1/6] Starting disposable PostgreSQL container ($IMAGE)"
 docker run --rm -d --name "$CONTAINER_NAME" \
   -e POSTGRES_PASSWORD="$DB_PASSWORD" \
   -e POSTGRES_DB="$DB_NAME" \
-  -p 127.0.0.1::5432 \
   "$IMAGE" >/dev/null
 
 ready=0
