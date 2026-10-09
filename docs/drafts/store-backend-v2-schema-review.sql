@@ -76,7 +76,27 @@ create table public.asri_store_order_items (
 create index asri_store_order_items_order_id_idx
   on public.asri_store_order_items (order_id);
 
--- 3) Server-managed shipping rate configuration. No public writes.
+-- 3) Order status history is append-only audit evidence for state transitions.
+create table public.asri_store_order_status_history (
+  id uuid primary key default gen_random_uuid(),
+  order_id uuid not null references public.asri_store_orders(id) on delete restrict,
+  previous_status text,
+  new_status text not null
+    check (new_status in (
+      'pending_payment', 'confirmed', 'processing', 'shipped',
+      'delivered', 'cancelled', 'expired'
+    )),
+  source text not null check (source in (
+    'order_create', 'payment_callback', 'payment_reconcile',
+    'fulfilment', 'reservation_expiry', 'admin_review'
+  )),
+  note text,
+  created_at timestamptz not null default now()
+);
+create index asri_store_order_status_history_timeline_idx
+  on public.asri_store_order_status_history (order_id, created_at desc);
+
+-- 4) Server-managed shipping rate configuration. No public writes.
 create table public.asri_store_shipping_rates (
   id uuid primary key default gen_random_uuid(),
   method_code text not null,
@@ -96,7 +116,7 @@ create index asri_store_shipping_rates_lookup_idx
   on public.asri_store_shipping_rates
   (method_code, destination_province, destination_city, is_active);
 
--- 4) Stock reservation ledger. Reservation creation must lock product rows and
+-- 5) Stock reservation ledger. Reservation creation must lock product rows and
 -- decrement available stock_quantity atomically in the same transaction.
 -- 'consumed' means the reserved units were sold; do not decrement stock twice.
 create table public.asri_store_stock_reservations (
@@ -117,7 +137,7 @@ create table public.asri_store_stock_reservations (
 create index asri_store_stock_reservations_expiry_idx
   on public.asri_store_stock_reservations (status, expires_at);
 
--- 5) Guest bearer tokens. Store only hashes; raw token is returned once by server.
+-- 6) Guest bearer tokens. Store only hashes; raw token is returned once by server.
 create table public.asri_store_order_access_tokens (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.asri_store_orders(id) on delete restrict,
@@ -132,7 +152,7 @@ create index asri_store_order_access_tokens_order_scope_idx
   on public.asri_store_order_access_tokens (order_id, scope, expires_at)
   where revoked_at is null;
 
--- 6) Shipment state and carrier/tracking snapshot.
+-- 7) Shipment state and carrier/tracking snapshot.
 create table public.asri_store_shipments (
   id uuid primary key default gen_random_uuid(),
   order_id uuid not null references public.asri_store_orders(id) on delete restrict,
@@ -154,7 +174,7 @@ create index asri_store_shipments_tracking_idx
   on public.asri_store_shipments (tracking_number)
   where tracking_number is not null;
 
--- 7) Shipment event history. source distinguishes internal/manual from verified carrier events.
+-- 8) Shipment event history. source distinguishes internal/manual from verified carrier events.
 create table public.asri_store_shipment_events (
   id uuid primary key default gen_random_uuid(),
   shipment_id uuid not null references public.asri_store_shipments(id) on delete restrict,
@@ -170,7 +190,7 @@ create table public.asri_store_shipment_events (
 create index asri_store_shipment_events_timeline_idx
   on public.asri_store_shipment_events (shipment_id, event_at desc);
 
--- 8) Link each existing payment attempt to a store order. This is additive only,
+-- 9) Link each existing payment attempt to a store order. This is additive only,
 -- but must not be applied until all function consumers and constraints are reviewed.
 alter table public.asri_payment_orders
   add column store_order_id uuid
@@ -187,10 +207,11 @@ create index asri_payment_orders_store_order_id_idx
   on public.asri_payment_orders (store_order_id)
   where store_order_id is not null;
 
--- 9) Lock down client roles. No anon/authenticated direct order/payment/token/shipment access.
+-- 10) Lock down client roles. No anon/authenticated direct order/payment/token/shipment access.
 -- service_role access is expected for trusted server code; verify exact grants in isolated DB.
 alter table public.asri_store_orders enable row level security;
 alter table public.asri_store_order_items enable row level security;
+alter table public.asri_store_order_status_history enable row level security;
 alter table public.asri_store_shipping_rates enable row level security;
 alter table public.asri_store_stock_reservations enable row level security;
 alter table public.asri_store_order_access_tokens enable row level security;
@@ -199,13 +220,25 @@ alter table public.asri_store_shipment_events enable row level security;
 
 revoke all on public.asri_store_orders from anon, authenticated;
 revoke all on public.asri_store_order_items from anon, authenticated;
+revoke all on public.asri_store_order_status_history from anon, authenticated;
 revoke all on public.asri_store_shipping_rates from anon, authenticated;
 revoke all on public.asri_store_stock_reservations from anon, authenticated;
 revoke all on public.asri_store_order_access_tokens from anon, authenticated;
 revoke all on public.asri_store_shipments from anon, authenticated;
 revoke all on public.asri_store_shipment_events from anon, authenticated;
 
-revoke all on public.asri_payment_orders from anon, authenticated;
+-- Explicit server-role grants for the new private tables; verify against project defaults.
+grant all on public.asri_store_orders to service_role;
+grant all on public.asri_store_order_items to service_role;
+grant all on public.asri_store_order_status_history to service_role;
+grant all on public.asri_store_shipping_rates to service_role;
+grant all on public.asri_store_stock_reservations to service_role;
+grant all on public.asri_store_order_access_tokens to service_role;
+grant all on public.asri_store_shipments to service_role;
+grant all on public.asri_store_shipment_events to service_role;
+
+-- Do not change existing grants on asri_payment_orders in this draft. The audit
+-- observed it as service-role-only; re-verify exact privileges during review.
 
 -- This is a review draft, so transaction is intentionally not committed/applied.
 -- When converted to a real migration, transaction handling must follow the
