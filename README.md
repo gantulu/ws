@@ -48,7 +48,7 @@ Vite menyediakan fallback SPA untuk rute frontend saat dijalankan melalui dev se
 - Checkout hanya membuat pesanan demo di frontend; tidak memanggil Duitku atau backend.
 - Harga dan total dari browser bukan nilai pembayaran otoritatif.
 - Jangan gunakan prototype ini untuk menerima pembayaran atau pesanan produksi.
-- Jangan mengubah database, Edge Function, secret, atau konfigurasi produksi sebagai bagian dari pekerjaan frontend ini.
+- Prototype frontend tetap demo-only. Integrasi backend V2 dikembangkan terpisah dan tidak mengubah tabel/Edge Function legacy tanpa audit dampak.
 - Sebelum integrasi, audit schema dan access policy produk, kontrak pembuatan order, kontrak Duitku sandbox, signature callback, idempotency, serta otorisasi tracking.
 - Pertahankan tabel legacy sampai konsumen dan rencana migrasinya dipetakan.
 
@@ -59,11 +59,12 @@ Vite menyediakan fallback SPA untuk rute frontend saat dijalankan melalui dev se
 - [Implementation and verification log](docs/store-mobile-v1-implementation-v1.md)
 - [Store backend contract audit V1](docs/store-backend-contract-audit-v1.md)
 - [Store Backend Contract V2 — locked design](docs/store-backend-contract-v2-design.md)
-- [Store Backend V2 implementation plan — review only](docs/store-backend-v2-implementation-plan.md)
+- [Store Backend V2 implementation plan](docs/store-backend-v2-implementation-plan.md)
+- [Store Backend V2 deep audit report](docs/store-backend-v2-audit-report.md)
 - [Store Backend V2 schema review draft — not a migration](docs/drafts/store-backend-v2-schema-review.sql)
 
 README sebelumnya merujuk ke `docs/duitku-v1.2-remediation.md`, tetapi file tersebut tidak ada pada tree yang diaudit. Konten remediasi tidak dibuat ulang tanpa sumber yang disetujui.
 
 ## Ruang kerja remediasi Duitku V1.2
 
-Repository ini juga digunakan untuk rancangan keamanan Supabase, integritas pembayaran, idempotency callback, hardening autentikasi custom tanpa Supabase Auth, dan perencanaan sandbox end-to-end. Perubahan backend tetap membutuhkan audit kontrak dan persetujuan tersendiri.
+Repository ini juga digunakan untuk audit keamanan Supabase, integritas pembayaran, idempotency callback, hardening autentikasi custom tanpa Supabase Auth, dan pengujian sandbox end-to-end. Implementasi berlanjut pada branch fitur dan lingkungan terisolasi; migrasi ke proyek Supabase yang terhubung tidak dijalankan sampai baseline migrasi dan skema dapat direproduksi dari repository.
