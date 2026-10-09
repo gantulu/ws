@@ -341,3 +341,89 @@ Until these decisions are locked, no backend schema or Edge Function changes sho
 - Empty product catalogue is displayed honestly.
 - No secret, production deployment, or legacy function is changed without explicit approval.
 - CI build and browser tests pass on the exact final commit, and evidence is linked from the implementation log.
+
+
+## 10. Contract decision set — Draft 2 for approval
+
+### Decision status
+
+- **Approved by user:** guest checkout with scoped opaque access tokens as the V2 baseline.
+- **Recommended below, pending user approval:** order lifecycle, shipping pricing, stock reservation, token lifetime, and payment retry rules.
+- **Implementation authorization:** not granted. This revision is documentation-only. No schema, database, Edge Function, frontend integration, or production changes are included.
+
+### 10.1 Order contract and lifecycle
+
+**Recommendation:** make order creation atomic and use these distinct state dimensions.
+
+- `order_status`: `pending_payment`, `confirmed`, `processing`, `shipped`, `delivered`, `cancelled`, `expired`.
+- `payment_status`: `unpaid`, `pending`, `paid`, `failed`, `expired`, `cancelled`, `refunded`.
+- `shipment_status`: `not_shipped`, `ready_to_ship`, `shipped`, `in_transit`, `delivered`, `exception`, `returned`.
+
+These values are proposed contract enums, not current database values. A migration must define allowed transitions, terminal states, and mapping from the existing Duitku statuses. Never mark an order `confirmed` merely because a payment URL was created. A verified paid event may transition the order from `pending_payment` to `confirmed`; fulfilment status changes only through a fulfilment operation or verified carrier event. Refund support should remain disabled until a provider-backed refund contract is separately specified.
+
+**Atomic order response:** return `orderNumber`, `orderStatus`, `paymentStatus`, item/subtotal/shipping/total snapshots, currency, and the one-time scoped tokens. Never return raw internal database identifiers unless needed by a documented trusted client contract.
+
+### 10.2 Shipping price and method
+
+**Recommendation for V2 first release:** use server-configured fixed rates by shipping method/area, not a courier quote API in the first integration.
+
+- Client submits a configured `shippingMethod` and delivery address fields, never a shipping amount.
+- Server resolves the method and eligible destination against a maintained rate configuration; calculates the cost and returns the selected method, rate, and total.
+- If no valid rate exists for the destination/method, reject checkout with a clear validation error; do not silently set shipping to zero.
+- Persist a snapshot of method, rate, destination and cost on the order.
+- Do not promise carrier tracking until a carrier integration or a verified manual fulfilment process is configured.
+- Store and return all prices as integer IDR amounts; do not use floating-point money calculations.
+
+Courier API integration can be a later version once the provider, credentials, rate contract, timeout behavior, and coverage have been selected.
+
+### 10.3 Stock reservation and release
+
+**Recommendation:** reserve stock atomically when the order is created, with a **15-minute initial reservation window**, pending approval.
+
+- The order-creation transaction validates stock and reserves quantities without allowing concurrent checkouts to oversell.
+- Store reservation expiry explicitly; the reservation must be recoverable by a scheduled/server-side expiry process.
+- When payment is confirmed within the reservation window, convert the reservation to a sale/decremented stock exactly once.
+- If payment fails, expires, or the order is cancelled before payment, release the reservation exactly once.
+- If a verified payment arrives after reservation expiry, do not silently oversell or discard the paid event. Mark the order for a documented exception/manual resolution flow and alert operations.
+- A periodic reconciliation job must recover abandoned reservations and reconcile payment state. It must be idempotent.
+- If reliable expiry processing cannot be delivered in V2, do not enable stock reservation in production until that prerequisite is met.
+
+The 15-minute value is a proposal, not an existing system setting.
+
+### 10.4 Token lifecycle and transport
+
+**Recommendation:** separate tokens by scope and minimize their lifetime.
+
+- **Tracking token:** 90 days from issuance, read-only access to one order, revocable. Issue a replacement through a separately verified customer recovery flow; do not expose a token-refresh endpoint that accepts only the old token without further safeguards.
+- **Payment token:** 30 minutes from issuance, scope limited to payment initiation/status for one order and its attempts. Issue a fresh token only through an authorized server-side flow if expired.
+- Generate cryptographically secure random token material on the server; use at least 256 bits of entropy. Store only a cryptographic hash; never log or persist the raw token.
+- Deliver tokens only over HTTPS and in POST bodies. Do not place tokens in URL paths/query strings, analytics, referrers, browser logs, or error reports.
+- Token validation must check hash, scope, order binding, expiry, revocation and rate limits. A token never grants table-level access.
+- For tracking, return only customer-safe order/item/payment/shipment summaries; omit full street address, customer phone/email, internal notes, raw provider payloads and internal identifiers.
+- Avoid third-party scripts on token-bearing pages and use a restrictive referrer policy.
+
+The 90-day and 30-minute periods are proposed defaults and require approval.
+
+### 10.5 Payment retry and idempotency
+
+**Recommendation:** allow a new payment attempt only after the previous attempt is conclusively failed or expired; do not start parallel active attempts for one order.
+
+- Each attempt receives a unique server-generated `merchant_order_id` and is linked to the store order.
+- Use a client idempotency key for each intended action; enforce uniqueness server-side and return the existing result for duplicate requests.
+- If a payment-create request times out or its outcome is unknown, query/reconcile the existing merchant order with Duitku before creating another attempt. Never assume a timeout means no charge was created.
+- If provider status is still pending or uncertain, keep the existing attempt and block a new attempt until reconciled or safely expired according to provider rules.
+- A retry after a confirmed failure/expiry creates a new attempt; the order total remains the server-authoritative snapshot unless a documented order-edit/repricing flow is added.
+- The callback handler must verify signature, deduplicate events, enforce valid transitions, and avoid downgrading `paid` on a late failure/pending event. Conflicting/out-of-order events go to reconciliation/manual review.
+- Test provider-specific expiry windows, callback delivery order, duplicate callback payloads, and status-query results in sandbox before relying on these rules.
+
+### 10.6 Decisions to approve together
+
+Please review the following recommended defaults as a single contract set:
+
+1. **Order lifecycle:** use the three distinct order/payment/shipment state dimensions and proposed values above.
+2. **Shipping:** server-configured fixed rates by method/destination for the first release; no courier quote API yet.
+3. **Stock:** atomic reservation for 15 minutes; consume on confirmed payment, release on failure/expiry/cancellation, and manually reconcile late-paid orders.
+4. **Token lifetime:** tracking token 90 days; payment token 30 minutes; separate scopes, hashed at rest, revocable.
+5. **Payment retry:** only after conclusive failed/expired status; one active attempt at a time; reconcile unknown outcomes before retry.
+
+**Approval gate:** until the user explicitly approves or changes these five decisions, do not write migration SQL, modify Edge Functions, alter grants/RLS, connect frontend to live backend, or deploy anything. After approval, prepare a separate implementation plan and migration diff for review; that approval still does not imply permission to apply changes to a live project or production.
