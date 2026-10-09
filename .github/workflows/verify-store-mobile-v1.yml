@@ -1,0 +1,33 @@
+name: Verify Store Mobile V1
+
+on:
+  push:
+    branches: [feat/store-mobile-v1-app]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-ui-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install
+      - name: Run backend schema contract guards
+        run: npm run test:backend-contract
+      - name: Build production bundle
+        run: npm run build
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Run UI behavior tests
+        run: npm test
