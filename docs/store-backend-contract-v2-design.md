@@ -319,15 +319,11 @@ Response (illustrative):
 - **V2-E — Frontend adapter:** only after the contract and sandbox tests pass, replace demo data with API calls behind an explicit integration boundary and loading/empty/error states.
 - **V2-F — Release review:** verify build and browser tests, review diffs, check secrets and RLS/grants, and obtain explicit release approval. No automatic production cutover.
 
-## 8. Decisions required before implementation
+## 8. Contract decisions
 
-1. **Guest identity:** approve guest checkout with opaque scoped tokens, or request a separately designed identity/session model.
-2. **Shipping calculation:** fixed/configured rates, courier API quote, or manually configured shipping method.
-3. **Stock policy:** reserve/decrement at order creation, reserve for a limited period, or decrement only after confirmed payment.
-4. **Tracking-token lifetime:** approve proposed 90-day tracking token and 30-minute payment token, or specify alternatives.
-5. **Payment retry:** allow a new attempt after a failed/expired attempt, with each attempt uniquely identified and provider reconciliation before retry.
+The five decisions listed in Section 10 were approved by the user on 2026-10-09 and are locked as the V2 contract baseline. They must not be silently changed during implementation. A required change must be proposed as a versioned revision and reviewed.
 
-Until these decisions are locked, no backend schema or Edge Function changes should be applied.
+Contract approval does not authorize implementation. Migration SQL, Edge Function changes, frontend live integration, production configuration changes, and deployments remain blocked until the separate implementation diff is reviewed and explicitly approved.
 
 ## 9. Acceptance criteria
 
@@ -416,7 +412,7 @@ The 90-day and 30-minute periods are proposed defaults and require approval.
 - The callback handler must verify signature, deduplicate events, enforce valid transitions, and avoid downgrading `paid` on a late failure/pending event. Conflicting/out-of-order events go to reconciliation/manual review.
 - Test provider-specific expiry windows, callback delivery order, duplicate callback payloads, and status-query results in sandbox before relying on these rules.
 
-### 10.6 Decisions to approve together
+### 10.6 Approved decision set
 
 Please review the following recommended defaults as a single contract set:
 
@@ -426,7 +422,7 @@ Please review the following recommended defaults as a single contract set:
 4. **Token lifetime:** tracking token 90 days; payment token 30 minutes; separate scopes, hashed at rest, revocable.
 5. **Payment retry:** only after conclusive failed/expired status; one active attempt at a time; reconcile unknown outcomes before retry.
 
-**Approval gate:** until the user explicitly approves or changes these five decisions, do not write migration SQL, modify Edge Functions, alter grants/RLS, connect frontend to live backend, or deploy anything. After approval, prepare a separate implementation plan and migration diff for review; that approval still does not imply permission to apply changes to a live project or production.
+**Implementation gate:** these five contract decisions are approved. The implementation plan and schema review draft are prepared for review; they are not executable authorization. Do not apply a migration, modify Edge Functions, alter live grants/RLS, connect the frontend to a live backend, or deploy until the user separately approves the implementation diff. That approval alone would still not imply permission for production deployment.
 
 
 ## 11. Decision lock and implementation review artifacts
