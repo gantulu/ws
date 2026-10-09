@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 
 test("catalog search and category filters work", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Hal sederhana/i })).toBeVisible();
   await page.getByRole("button", { name: "Aksesori", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Everyday Canvas Tote" })).toBeVisible();
@@ -13,7 +13,7 @@ test("catalog search and category filters work", async ({ page }) => {
 });
 
 test("product selection, checkout validation, and demo tracking work", async ({ page }) => {
-  await page.goto("/products/linen-shirt");
+  await page.goto("/products/linen-shirt", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Kemeja Linen Relaxed" })).toBeVisible();
   await page.getByRole("button", { name: "Tambah jumlah" }).click();
   await expect(page.locator(".quantity span")).toHaveText("2");
@@ -39,7 +39,7 @@ test("product selection, checkout validation, and demo tracking work", async ({ 
 });
 
 test("unknown routes offer a way back to the catalog", async ({ page }) => {
-  await page.goto("/route-that-does-not-exist");
+  await page.goto("/route-that-does-not-exist", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Halaman tidak ditemukan" })).toBeVisible();
   await page.getByRole("button", { name: "Kembali ke koleksi" }).click();
   await expect(page.getByRole("heading", { name: /Temukan favoritmu/ })).toBeVisible();
