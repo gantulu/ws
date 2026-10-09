@@ -3,7 +3,7 @@
 - Repository: `gantulu/ws`
 - Branch: `feat/store-mobile-v1-app`
 - Design: Store Backend Contract V2 Draft 2
-- Status: **PLAN ONLY — IMPLEMENTATION NOT AUTHORIZED**
+- Status: **ACTIVE IMPLEMENTATION PLAN — REPOSITORY/SANDBOX WORK PROCEEDS; LIVE MIGRATION BLOCKED UNTIL BASELINE RECONCILIATION**
 - Approved contract decisions: guest checkout with scoped opaque tokens; separated order/payment/shipment states; server-configured fixed shipping rates; atomic stock reservation for 15 minutes; tracking token 90 days; payment token 30 minutes; retry only after confirmed failure/expiry and provider reconciliation.
 - No database changes, Edge Function changes, frontend live integration, or deployment have been made as part of this plan.
 
@@ -25,23 +25,23 @@ Explicitly excluded:
 - Exposing payment, order, token, callback, or shipment tables to direct anonymous table queries.
 - Refunds, courier API rate quoting, variant-level stock accounting, customer accounts, and unrelated legacy security remediation.
 
-## 2. Phases and approval gates
+## 2. Execution phases and safety gates
 
-### Phase A — Contract locked
+### Phase A — Contract baseline
 
-Approved decisions are documented in [Store Backend Contract V2](store-backend-contract-v2-design.md). Any change to status names, stock semantics, token lifetime, shipping policy, or retry policy requires a versioned decision before implementation.
+The approved decisions are documented in [Store Backend Contract V2](store-backend-contract-v2-design.md). Preserve those decisions. If code-level evidence proves a contract change is necessary, document the evidence and version the contract rather than silently changing behavior.
 
 ### Phase B — Migration review (current deliverable)
 
 Review the separate draft SQL in [store-backend-v2-schema-review.sql](drafts/store-backend-v2-schema-review.sql). It is deliberately stored under `docs/drafts/`, not `supabase/migrations/`, and must not be run as-is.
 
-Required before any migration is approved:
-1. Confirm project migration ownership and source-of-truth: the live project lists migrations that are not all represented by this repository.
-2. Reconcile existing schema, indexes, policies, grants, triggers, and all consumers of `asri_payment_orders`.
-3. Review the full SQL diff line-by-line; decide whether shipping-rate data is seeded separately.
-4. Run the proposed DDL on a disposable/local database or isolated Supabase development branch, never the live project.
-5. Test constraints, RLS/grants, concurrency and rollback/forward-repair procedure.
-6. Produce a clean, timestamped migration through the project's agreed Supabase CLI workflow only after approval.
+Required before creating/applying a migration:
+1. Reconcile the live migration ledger against repository migration files. The current repository branch has no `supabase/` directory, while the linked project has 40+ migration records; the project/repository source of truth is therefore not yet reproducible from this branch.
+2. Capture the remote schema baseline with the official Supabase CLI workflow (`supabase db pull`) into a separate audit branch; review the generated diff and ownership before treating it as canonical.
+3. Reconcile existing schema, indexes, policies, grants, triggers, and every consumer of `asri_payment_orders`.
+4. Run the corrected DDL on a disposable/local database or isolated Supabase development branch, never directly against the live project.
+5. Test constraints, grants/RLS, trigger behavior, concurrency, idempotency, and forward-repair/rollback procedure.
+6. Generate a timestamped migration using the official Supabase CLI workflow; commit the migration and test evidence together. No repeated approval prompts are required for these repository and isolated-environment steps.
 
 ### Phase C — Server endpoints (sandbox only)
 
@@ -89,20 +89,23 @@ Requires a separate explicit release approval. Review final diff, security advis
 - The audited `asri_products` catalogue was empty (0 active products); a controlled sandbox fixture is needed for end-to-end tests.
 - Existing payment tables/functions are service-role-only and the current create endpoint requires a pre-existing draft row.
 - Current custom identity logic compares a stored password directly; V2 must not reuse it.
-- The live Supabase project migration history includes unrelated app migrations and is not fully represented by this repository. Do not infer that this repo can safely apply migrations to the live project.
-- The callback upsert conflict-target issue and stale status response require a tested fix.
+- The live Supabase project migration history contains 40+ migrations, while this repository branch has no `supabase/` directory. The repository is not yet a complete migration source of truth; first capture/reconcile the remote baseline using the official Supabase CLI migration workflow.
+- The callback path has multiple correctness issues requiring fixes: partial-index conflict inference, status response from a stale pre-update row, callback result-code mapping, incorrect use of `paymentCode` as payment method, duplicate callback handling before verifying that the event belongs to a valid order, and non-atomic order/history/transaction updates.
 - The existing payment table enforces `amount > 0`; the first release must reject zero-total orders or separately approve a zero-payment flow.
-- Existing product stock is tracked at product level; per-size/per-color inventory is not represented by the audited `stock_quantity` field. V2 must reject unsupported variant inventory assumptions until a separate variant stock model is approved.
+- Existing product stock is tracked at product level; per-size/per-color inventory is not represented by the audited `stock_quantity` field. V2 must reject unsupported variant inventory assumptions until a separate variant stock model exists.
+- Duitku API V2's current docs use HMAC-SHA256 for inquiry/callback/status signatures. `transactionStatus` status codes differ from callback `resultCode`; preserve separate mappings. Do not poll status aggressively because Duitku documents rate limits.
+- The Supabase security advisor reports `public.ns_invest` has RLS disabled despite a policy existing. This is unrelated to the store schema but is a live security finding; do not silently change access behavior without auditing intended consumers/policies.
 
-## 4. Proposed acceptance gates
+## 4. Verification gates (execution proceeds automatically where safe)
 
-| Gate | Evidence required | Approval required |
+| Gate | Evidence required | Next action |
 |---|---|---|
-| Schema review | Reviewed SQL diff, schema compatibility notes, RLS/grants checklist | Yes, before migration creation/application |
-| Sandbox server | Endpoint contract tests and sandbox logs without secrets | Yes, before frontend live integration |
-| Frontend adapter | CI build, Playwright suite, explicit live-mode empty/error states | Yes, before merge/release |
-| Production release | Security review, callback/idempotency evidence, rollback plan | Separate explicit approval |
+| Schema baseline | Remote migration ledger reconciled with versioned repository baseline | Continue migration design only when reproducible |
+| Schema sandbox | DDL applies cleanly; grants/RLS and constraints pass; concurrency test proves no oversell | Generate the versioned migration and continue server work |
+| Sandbox server | Endpoint contract tests and Duitku sandbox evidence without secrets | Continue frontend adapter after backend contract passes |
+| Frontend adapter | CI build, Playwright suite, explicit live-mode empty/error states | Prepare release candidate |
+| Production release | Security review, callback/idempotency evidence, rollback plan and environment verification | Deploy only to the explicitly configured target; never substitute production for sandbox tests |
 
-## 5. Safety statement
+## 5. Current execution status and safety statement
 
-This document is a plan. The accompanying SQL is a review draft only, not a Supabase migration. No database operation, Edge Function deployment, live frontend integration, production configuration change, or deployment is authorized by this document.
+The accompanying SQL remains a review draft, not a migration. Repository implementation, documentation, static tests, and isolated/local tests may proceed without asking for approval at every step. The current connected Supabase project is a live project with unrelated application data and a migration ledger not represented in this repository. Do not apply the proposed DDL to that project until a reproducible baseline and an isolated test result exist. This is a technical safety gate, not a request for repeated user approval. Do not read or print secret values. Do not deploy an untested function or connect the storefront to live writes before the server contract passes sandbox verification.
