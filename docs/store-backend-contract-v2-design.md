@@ -4,7 +4,7 @@
 - Design branch: `feat/store-mobile-v1-app`
 - Version: Store Backend Contract V2 — Draft 1
 - Date: 2026-10-09
-- Status: **CONTRACT DECISIONS LOCKED — IMPLEMENTATION NOT AUTHORIZED**
+- Status: **CONTRACT DECISIONS LOCKED — FEATURE-BRANCH IMPLEMENTATION AUTHORIZED; LIVE MIGRATION BLOCKED UNTIL BASELINE RECONCILIATION**
 - Workflow: AUDIT → RECOMMEND → DESIGN → APPROVE → IMPLEMENT → VERIFY
 - Scope: guest checkout, product/order contract, Duitku sandbox payments, and customer-safe tracking.
 - Safety boundary: no database migration, Edge Function deployment, secret access, production configuration change, or change to `main` is authorized by this document.
@@ -13,7 +13,7 @@
 
 Use guest checkout with scoped opaque access tokens as the baseline proposal. Do not reproduce the existing phone/password comparison in `asri-duitku-sandbox`. Keep all payment/order writes server-side and preserve the current public read-only policy for active products.
 
-This is a design proposal only. The schema and endpoint contracts below require review and approval before implementation.
+The five contract decisions are locked. Repository-side implementation, documentation, static checks, and isolated sandbox work may proceed without repeated approval prompts. Keep any change that contradicts the locked contract versioned and evidence-backed.
 
 ## 2. Current blockers from the V1 audit
 
@@ -335,7 +335,7 @@ Contract approval does not authorize implementation. Migration SQL, Edge Functio
 - Tracking token is scoped, expiring, revocable, and cannot read another order.
 - Payment/order/shipment tables remain inaccessible to anonymous direct reads/writes.
 - Empty product catalogue is displayed honestly.
-- No secret, production deployment, or legacy function is changed without explicit approval.
+- No secret is exposed. Legacy functions remain unchanged unless a versioned replacement has passed tests. Production release is not inferred from sandbox test success.
 - CI build and browser tests pass on the exact final commit, and evidence is linked from the implementation log.
 
 
@@ -398,7 +398,7 @@ The 15-minute value is a proposal, not an existing system setting.
 - For tracking, return only customer-safe order/item/payment/shipment summaries; omit full street address, customer phone/email, internal notes, raw provider payloads and internal identifiers.
 - Avoid third-party scripts on token-bearing pages and use a restrictive referrer policy.
 
-The 90-day and 30-minute periods are proposed defaults and require approval.
+The 90-day and 30-minute periods are the approved V2 contract defaults.
 
 ### 10.5 Payment retry and idempotency
 
@@ -414,7 +414,7 @@ The 90-day and 30-minute periods are proposed defaults and require approval.
 
 ### 10.6 Approved decision set
 
-Please review the following recommended defaults as a single contract set:
+The following defaults form the approved contract set:
 
 1. **Order lifecycle:** use the three distinct order/payment/shipment state dimensions and proposed values above.
 2. **Shipping:** server-configured fixed rates by method/destination for the first release; no courier quote API yet.
@@ -422,7 +422,7 @@ Please review the following recommended defaults as a single contract set:
 4. **Token lifetime:** tracking token 90 days; payment token 30 minutes; separate scopes, hashed at rest, revocable.
 5. **Payment retry:** only after conclusive failed/expired status; one active attempt at a time; reconcile unknown outcomes before retry.
 
-**Implementation gate:** these five contract decisions are approved. The implementation plan and schema review draft are prepared for review; they are not executable authorization. Do not apply a migration, modify Edge Functions, alter live grants/RLS, connect the frontend to a live backend, or deploy until the user separately approves the implementation diff. That approval alone would still not imply permission for production deployment.
+**Implementation status:** the user has instructed us to continue implementation and verification without requesting approval at every stage. Continue repository changes and isolated/sandbox tests proactively. The live database's migration history is not yet represented by this repository; therefore, do not apply this draft to the connected live database until its baseline is captured and reconciled. This is a technical safety constraint, not a request for another approval.
 
 
 ## 11. Decision lock and implementation review artifacts
@@ -438,6 +438,6 @@ The design is now **locked as the approved contract baseline**. The implementati
 - [Implementation plan](store-backend-v2-implementation-plan.md)
 - [Schema review draft — not a migration](drafts/store-backend-v2-schema-review.sql)
 
-Approval is limited to the contract design. It does **not** authorize migration application, Edge Function changes, frontend live integration, secret access, production configuration changes, merge, or deployment. The SQL file is outside `supabase/migrations/` and must be reconciled and tested in an isolated environment before it can be converted into a real migration.
+The contract decisions are locked. Implementation should proceed in the feature branch and isolated environment. The SQL file is outside `supabase/migrations/` and must be reconciled with the remote schema baseline and tested in an isolated environment before it can be converted into a real migration.
 
 Additional compatibility constraint: the audited `asri_payment_orders.amount` has a database check requiring a positive value. Unless a separate zero-value checkout flow is approved, the first release must reject orders whose computed total is zero.
