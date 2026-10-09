@@ -23,7 +23,7 @@ test("product selection, checkout validation, and demo tracking work", async ({ 
   await expect(page.getByRole("heading", { name: "Ringkasan pesanan" })).toBeVisible();
   await expect(page.getByText("Qty 2")).toBeVisible();
   await page.getByRole("button", { name: "Buat pesanan demo" }).click();
-  await expect(page.getByLabel("Nama lengkap")).toHaveJSProperty("validity.valueMissing", true);
+  expect(await page.getByLabel("Nama lengkap").evaluate((input) => input.validity.valueMissing)).toBe(true);
 
   await page.getByLabel("Nama lengkap").fill("Pelanggan Demo");
   await page.getByLabel("Nomor WhatsApp").fill("081234567890");
