@@ -15,7 +15,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "[1/6] Starting disposable PostgreSQL container ($IMAGE)"
+echo "[1/7] Starting disposable PostgreSQL container ($IMAGE)"
 docker run --rm -d --name "$CONTAINER_NAME" \
   -e POSTGRES_PASSWORD="$DB_PASSWORD" \
   -e POSTGRES_DB="$DB_NAME" \
@@ -42,18 +42,18 @@ psql_scalar() {
   docker exec "$CONTAINER_NAME" psql -X -q -A -t -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "$1"
 }
 
-echo "[2/6] Creating Supabase-like roles in disposable DB"
+echo "[2/7] Creating Supabase-like roles in disposable DB"
 psql_stdin <<'SQL'
 CREATE ROLE anon NOLOGIN;
 CREATE ROLE authenticated NOLOGIN;
 CREATE ROLE service_role NOLOGIN BYPASSRLS;
 SQL
 
-echo "[3/6] Applying catalog and payment review drafts to disposable DB"
+echo "[3/7] Applying catalog and payment review drafts to disposable DB"
 psql_stdin < "$ROOT_DIR/docs/drafts/asri-catalog-baseline-review.sql"
 psql_stdin < "$ROOT_DIR/docs/drafts/asri-payment-baseline-review.sql"
 
-echo "[4/6] Applying Store V2 draft without its review-only BEGIN/ROLLBACK wrapper"
+echo "[4/7] Applying Store V2 draft without its review-only BEGIN/ROLLBACK wrapper"
 # The draft's wrapper is intentionally not executed as written: final ROLLBACK
 # would discard all DDL. Run the reviewed DDL as a test transaction instead.
 sed '/^[[:space:]]*begin;[[:space:]]*$/Id; /^[[:space:]]*rollback;[[:space:]]*$/Id' \
