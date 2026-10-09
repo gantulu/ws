@@ -73,7 +73,7 @@ Required test matrix:
 
 ### Phase E — Frontend adapter
 
-Only after Phase C/D pass in sandbox:
+After Phase C/D pass in sandbox:
 - Add an explicit live/demo mode boundary; no silent demo fallback in live mode.
 - Connect catalogue read to active products with loading/empty/error states.
 - Replace demo checkout and tracking calls with the documented API contract.
